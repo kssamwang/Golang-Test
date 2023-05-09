@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"flag"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/homedir"
@@ -39,14 +38,21 @@ func getNodeInfo() {
 		panic(err)
 	}
 	for _, node := range nodeList.Items {
-		fmt.Printf("=========================\nName    :%s\nPhase   :%s\nAddress :%s\nOSImage :%s\nk8sVer  :%s\nOS      :%s\nArch    :%s\n",
+		fmt.Printf("=========================\nName    : %s\nAddress : %s\nOSImage : %s\nk8sVer  : %s\nOS      : %s\nArch    : %s\nKernel  : %s\nCreated : %s\nNowtime : %s\nCPU     : %s\nFreeCPU : %s\nDocker  : %s\nStatus  : %s\nMemory  : %s\n",
 			node.Name,
-			node.Status.Phase,
 			node.Status.Addresses,
 			node.Status.NodeInfo.OSImage,
 			node.Status.NodeInfo.KubeletVersion,
 			node.Status.NodeInfo.OperatingSystem,
 			node.Status.NodeInfo.Architecture,
+			node.Status.NodeInfo.KernelVersion,
+			node.CreationTimestamp,
+			node.Status.Conditions[0].LastHeartbeatTime,
+			node.Status.Capacity.Cpu(),
+			node.Status.Allocatable.Cpu().String(),
+			node.Status.NodeInfo.ContainerRuntimeVersion,
+			node.Status.Conditions[len(node.Status.Conditions)-1].Type,
+			node.Status.Allocatable.Memory().String(),
 		)
 	}
 }
