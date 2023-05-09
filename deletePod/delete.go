@@ -7,32 +7,34 @@ import (
 	"path/filepath"
 	"flag"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/homedir"
 )
 
-func initClientset() (*kubernetes.Clientset,error){
-		// 连接集群
-		var kubeconfig *string
-		if home := homedir.HomeDir(); home != "" {
-				kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
-		} else {
-				kubeconfig = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
-		}
-		flag.Parse()
+func initClientsetConfig() (*kubernetes.Clientset,*rest.Config,error){
+	// 连接集群
+	var kubeconfig *string
+	if home := homedir.HomeDir(); home != "" {
+		kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
+	} else {
+		kubeconfig = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
+	}
+	flag.Parse()
 
-		// 使用kubeconfig中的当前上下文,加载配置文件
-		config, err := clientcmd.BuildConfigFromFlags("", *kubeconfig)
-		if err != nil {
-				panic(err.Error())
-		}
-		// 创建clientset
-		clientset, err := kubernetes.NewForConfig(config)
-		if err != nil {
-				panic(err.Error())
-		}
-	return clientset,err
+	// 使用kubeconfig中的当前上下文,加载配置文件
+	config, err := clientcmd.BuildConfigFromFlags("", *kubeconfig)
+	if err != nil {
+		panic(err.Error())
+	}
+	//fmt.Println(reflect.TypeOf(config))
+	// 创建clientset
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		panic(err.Error())
+	}
+	return clientset,config,err
 }
 
 func deletePod(clientset *kubernetes.Clientset, podName string, namespace string) {
@@ -54,13 +56,12 @@ func deletePod(clientset *kubernetes.Clientset, podName string, namespace string
 }
 
 func main() {
-	clientset,err := initClientset()
+	clientset,_,err := initClientsetConfig()
 	if err != nil {
-				panic(err.Error())
+		panic(err.Error())
 		return
-		}
+	}
 	deletePod(clientset,"gpu-pod1","default")
 	deletePod(clientset,"gpu-pod2","default")
 }
-
 
