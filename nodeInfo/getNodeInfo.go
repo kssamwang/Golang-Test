@@ -3,15 +3,16 @@ package main
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 	"flag"
+	"path/filepath"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/homedir"
 )
 
-func getNodeInfo() {
+func initClientsetConfig() (*kubernetes.Clientset,*rest.Config,error){
 	// 连接集群
 	var kubeconfig *string
 	if home := homedir.HomeDir(); home != "" {
@@ -26,12 +27,16 @@ func getNodeInfo() {
 	if err != nil {
 		panic(err.Error())
 	}
+	//fmt.Println(reflect.TypeOf(config))
 	// 创建clientset
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		panic(err.Error())
 	}
+	return clientset,config,err
+}
 
+func getNodeInfo(clientset *kubernetes.Clientset) {
 	// 获取node信息
 	nodeList, err := clientset.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
@@ -58,5 +63,10 @@ func getNodeInfo() {
 }
 
 func main() {
-	getNodeInfo()
+	clientset,_,err := initClientsetConfig()
+	if err != nil {
+		panic(err.Error())
+		return
+	}
+	getNodeInfo(clientset)
 }
