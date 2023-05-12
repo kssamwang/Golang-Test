@@ -1,8 +1,8 @@
 # Golang-Test Kubenetes client-go开发重要demo
 
 ## 0. Go环境设置
-Go 语言版本 1.20
-
+Golang 1.20
+Docker 20.10.12
 Kubenetes 1.23.6
 
 ## 1. 创建pod
@@ -25,3 +25,9 @@ Kubenetes 1.23.6
 
 ## 7. 获取prometheus信息
 未完成
+
+## 8. 将文件从本地主机传输到k8s集群任意节点任意pod任意容器内
+已完成
+
+## 9. 动态更新k8s集群任意节点任意pod任意容器内的CPU和内存资源量
+已完成，待完善
