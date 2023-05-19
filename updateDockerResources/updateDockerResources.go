@@ -1,6 +1,7 @@
 package main
 
 import (
+	//"os"
 	"context"
 	"flag"
 	"fmt"
@@ -47,34 +48,53 @@ func getPodInfo(clientset *kubernetes.Clientset,podName string,namespace string)
 	return pod,err
 }
 
-func updateResources(containerName string, resources *docker.UpdateContainerOptions) error {
+func updateResources(local bool, nodeName string, containerName string, resources *docker.UpdateContainerOptions) error {
 	// 创建 Docker client
-	client, err := docker.NewClientFromEnv()
-	if err != nil {
-		return err
-	}
+	if local == true {
+		client, err := docker.NewClientFromEnv()
+		if err != nil {
+			return err
+		}
+	
+		// 通过容器名获取容器对象
+		container, err := client.InspectContainer(containerName)
+		if err != nil {
+			return err
+		}
+	
+		// 更新容器资源
+		err = client.UpdateContainer(container.ID, *resources)
+		if err != nil {
+			return err
+		}
 
-	// 通过容器名获取容器对象
-	container, err := client.InspectContainer(containerName)
-	if err != nil {
-		return err
-	}
-
-	// 更新容器资源
-	err = client.UpdateContainer(container.ID, *resources)
-	if err != nil {
-		return err
+	} else {
+		endpoint := "tcp://" + nodeName + ":2376"
+		cert := "/tls/" + nodeName + "/server-cert.pem"
+		key := "/tls/" + nodeName + "/server-key.pem"
+		ca := "/tls/ca.pem"
+		client, err := docker.NewTLSClient(endpoint,cert,key,ca)
+		if err != nil {
+			return err
+		}
+	
+		// 通过容器名获取容器对象
+		container, err := client.InspectContainer(containerName)
+		if err != nil {
+			return err
+		}
+	
+		// 更新容器资源
+		err = client.UpdateContainer(container.ID, *resources)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
 }
 
-func updateK8SDockerResources(containerName string,podName string,namespace string,idx int){
-	clientset,_,err1 := initClientsetConfig()
-	if err1 != nil {
-		panic(err1.Error())
-		return
-	}
+func updateK8SDockerResources(clientset *kubernetes.Clientset,containerName string,podName string,namespace string,idx int) error {
 	/*	!!!!!!!!  注意  !!!!!!!!!!!
 		通过k8s创建的docker容器的真实名称docker name
 		不是 yaml 文件中或 client-go 调用函数创建容器时指定的container name
@@ -92,13 +112,29 @@ func updateK8SDockerResources(containerName string,podName string,namespace stri
 		CPUQuota : int(100000000),
 		Memory : int(20000000000),
 	}
-	err2 := updateResources(dockerName,&res)
-	if err2 != nil {
-		panic(err2.Error())
+	// 在~/.bashrc中添加 export HOSTNAME=master
+	// localhost := os.Getenv("HOSTNAME")
+	// fmt.Println(localhost)
+	var local bool
+	if pod.Spec.NodeName != "master" {
+		local = false
+	} else {
+		local = true
 	}
-
+	err := updateResources(local,pod.Spec.NodeName,dockerName,&res)
+	if err != nil {
+		panic(err.Error())
+		return err
+	}
+	return nil
 }
 
 func main(){
-	updateK8SDockerResources("test-container-1","gpu-pod1","default",0)
+	clientset,_,err1 := initClientsetConfig()
+	if err1 != nil {
+		panic(err1.Error())
+		return
+	}
+	updateK8SDockerResources(clientset,"test-container-1","gpu-pod1","default",0)
+	updateK8SDockerResources(clientset,"test-container-3","gpu-pod-master","default",0)
 }
