@@ -66,22 +66,27 @@ func execInPod(clientset *kubernetes.Clientset,config *rest.Config,podName strin
 		io.Reader
 		io.Writer
 	}{os.Stdin, os.Stdout}
-	if err = exec.Stream(remotecommand.StreamOptions{
-		Stdin: screen,
-		Stdout: screen,
-		Stderr: screen,
-		Tty:    false,
-	}); err != nil {
-		fmt.Print(err)
-	}
+        outfile,err := os.Create("result.txt")
+        if err != nil {
+                fmt.Println("open failed.",err)
+                return
+        }
+        if err = exec.Stream(remotecommand.StreamOptions{
+                Stdin: screen,
+                Stdout: outfile,
+                Stderr: screen,
+                Tty:    false,
+        }); err != nil {
+                fmt.Print(err)
+        }
 }
 
 func main() {
-	clientset,config,err := initClientsetConfig()
-	if err != nil {
-		panic(err.Error())
-		return
-	}
-	cmdlines := [1]string{"nvidia-smi"}
-	execInPod(clientset,config,"gpu-pod1","default",cmdlines[:])
+        clientset,config,err := initClientsetConfig()
+        if err != nil {
+                panic(err.Error())
+                return
+        }
+        cmdlines := [6]string{"/GraphX/bin/algo_BellmanFordGPUTest","testGraph.txt","100","2000",">>","result.txt"}
+        execInPod(clientset,config,"gpu-pod","default",cmdlines[:])
 }
